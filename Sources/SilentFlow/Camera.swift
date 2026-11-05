@@ -6,7 +6,7 @@ import SwiftUI
 /// the preview is mirrored in the UI so it feels like a mirror.
 final class Camera: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate {
     let session = AVCaptureSession()
-    let queue = DispatchQueue(label: "lipreader.camera", qos: .userInteractive)
+    let queue = DispatchQueue(label: "silentflow.camera", qos: .userInteractive)
     private let output = AVCaptureVideoDataOutput()
     var onFrame: ((CMSampleBuffer) -> Void)?
 

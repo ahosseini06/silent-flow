@@ -265,7 +265,7 @@ class Server:
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--models", default=os.path.join(HERE, "..", "models"))
-    ap.add_argument("--profile", default="~/Library/Application Support/LipReader")
+    ap.add_argument("--profile", default="~/Library/Application Support/SilentFlow")
     ap.add_argument("--device", default=None)
     ap.add_argument("--no-lm", action="store_true")
     ap.add_argument("--no-llm", action="store_true", help="disable LLM context correction")
@@ -274,6 +274,13 @@ def main() -> None:
 
     logging.basicConfig(level=logging.WARNING, stream=sys.stderr)
     warnings.filterwarnings("ignore")
+
+    # the app used to be called Lip Reader: carry its data over once
+    old = os.path.expanduser("~/Library/Application Support/LipReader")
+    new = os.path.expanduser(args.profile)
+    if os.path.isdir(old) and not os.path.exists(new):
+        os.rename(old, new)
+        log(f"moved {old} -> {new}")
 
     t = time.perf_counter()
     server = Server(args)

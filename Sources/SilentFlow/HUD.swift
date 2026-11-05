@@ -188,7 +188,7 @@ struct MenuBarContent: View {
             model.replayOnboarding()
         }
         Divider()
-        Button("Quit Lip Reader") { NSApp.terminate(nil) }.keyboardShortcut("q")
+        Button("Quit SilentFlow") { NSApp.terminate(nil) }.keyboardShortcut("q")
     }
 
     private var statusLine: String {

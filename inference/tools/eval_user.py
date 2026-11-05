@@ -13,7 +13,7 @@ from adapt import adapt  # noqa
 from textutil import edits, normalize  # noqa
 
 ap = argparse.ArgumentParser()
-ap.add_argument("--profile", default=os.path.expanduser("~/Library/Application Support/LipReader"))
+ap.add_argument("--profile", default=os.path.expanduser("~/Library/Application Support/SilentFlow"))
 ap.add_argument("--modes", default="frontend")
 ap.add_argument("--sizes", default="0,6,12,18")
 ap.add_argument("--steps", type=int, default=60)

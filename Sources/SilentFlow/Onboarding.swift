@@ -623,7 +623,7 @@ private struct WelcomeStep: View {
                 .frame(height: 64, alignment: .leading)
                 .accessibilityLabel(OnboardingView.welcomePhrases[0])
 
-            Text("Lip Reader turns the words you mouth into text, in any app on your Mac.\nNo microphone, no cloud. Nothing leaves this machine.")
+            Text("SilentFlow turns the words you mouth into text, in any app on your Mac.\nNo microphone, no cloud. Nothing leaves this machine.")
                 .font(.system(size: 16))
                 .lineSpacing(6)
                 .foregroundStyle(Theme.textSoft)
@@ -698,7 +698,7 @@ private struct AccessStep: View {
         ZStack {
             LeftColumn {
                 StepText("Let it type for you.",
-                         "To notice your key in any app and type where your cursor is, macOS needs you to switch Lip Reader on under Privacy & Security, Accessibility.")
+                         "To notice your key in any app and type where your cursor is, macOS needs you to switch SilentFlow on under Privacy & Security, Accessibility.")
                 HStack(spacing: 12) {
                     DrawnCheck(done: trusted)
                     Text(trusted ? "Connected. It works in every app." : "Waiting for the switch…")
@@ -718,7 +718,7 @@ private struct AccessStep: View {
                 HStack(spacing: 12) {
                     LogoIcon()
                         .frame(width: 30, height: 30)
-                    Text("Lip Reader")
+                    Text("SilentFlow")
                         .font(.system(size: 14, weight: .medium))
                         .foregroundStyle(Theme.text)
                     Spacer()
@@ -891,7 +891,7 @@ extension String {
     var capitalizedFirst: String { prefix(1).uppercased() + dropFirst() }
 }
 
-// MARK: - Offline snapshots (`LipReader --render-onboarding <dir>`)
+// MARK: - Offline snapshots (`SilentFlow --render-onboarding <dir>`)
 
 enum OnboardingSnapshots {
     @MainActor
@@ -1010,7 +1010,7 @@ struct TutorialView: View {
                     .tracking(-0.8)
                     .foregroundStyle(Theme.text)
                     .contentTransition(.opacity)
-                Text(stage == 3 ? "It works the same in every app: hold, mouth, Return. Lip Reader lives in your menu bar."
+                Text(stage == 3 ? "It works the same in every app: hold, mouth, Return. SilentFlow lives in your menu bar."
                                 : "Dictate the rest of this message, the same way you will in any app. It stays right here.")
                     .font(.system(size: 15))
                     .lineSpacing(5)
@@ -1065,7 +1065,7 @@ struct TutorialView: View {
             if stage < 3 {
                 Button("Skip tutorial") { model.finishTutorial() }.buttonStyle(PillButton(primary: false))
             } else {
-                Button("Start using Lip Reader") { model.finishTutorial() }
+                Button("Start using SilentFlow") { model.finishTutorial() }
                     .buttonStyle(PillButton())
                     .keyboardShortcut(.defaultAction)
                     .transition(.opacity)

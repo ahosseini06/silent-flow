@@ -1,7 +1,7 @@
 import AppKit
 import SwiftUI
 
-/// The Silent Flow mark (pixel lips), drawn from the same dots as Resources/logo.svg.
+/// The SilentFlow mark (pixel lips), drawn from the same dots as Resources/logo.svg.
 enum LogoMark {
     /// (x, y, opacity) of each 2.25-unit dot, in the logo's 30x30 design space.
     static let dots: [(Double, Double, Double)] = [

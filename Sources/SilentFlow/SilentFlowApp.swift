@@ -2,12 +2,12 @@ import AppKit
 import SwiftUI
 
 
-struct LipReaderApp: App {
+struct SilentFlowApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @ObservedObject private var model = AppModel.shared
 
     var body: some Scene {
-        Window("Lip Reader", id: "main") {
+        Window("SilentFlow", id: "main") {
             RootView()
                 .environmentObject(model)
                 .frame(minWidth: 560, minHeight: 380)
@@ -187,7 +187,7 @@ struct AccessibilityNudge: View {
     var body: some View {
         HStack(spacing: 10) {
             Image(systemName: "keyboard")
-            Text("To type into other apps, allow Lip Reader under Accessibility.")
+            Text("To type into other apps, allow SilentFlow under Accessibility.")
             Button("Open Settings") {
                 PushToTalk.requestTrust()
                 PushToTalk.openAccessibilitySettings()

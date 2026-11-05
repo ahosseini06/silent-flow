@@ -1,12 +1,12 @@
-# Lip Reader
+# SilentFlow
 
 A native macOS app that shows your webcam and writes subtitles for what your lips say.
 No audio is used, and everything runs on your Mac.
 
 ```
 ./scripts/setup.sh       # once: Python env + model weights (~1.2 GB) + correction LLM (~2.5 GB)
-./scripts/build_app.sh   # builds build/LipReader.app (Swift toolchain only, no Xcode)
-open build/LipReader.app
+./scripts/build_app.sh   # builds build/SilentFlow.app (Swift toolchain only, no Xcode)
+open build/SilentFlow.app
 ```
 
 Needs Apple Silicon, macOS 14+, [`uv`](https://github.com/astral-sh/uv), and the Swift toolchain (Command Line Tools is enough).
@@ -24,11 +24,11 @@ in, **Esc** throws it away, and holding **⌥** again before Return adds another
 stays in front the whole time. Pressing another key while holding ⌥ (a normal ⌥-shortcut) cancels the recording.
 
 Every dictation you accept is saved with its mouth clip and the model's original reading, in
-`~/Library/Application Support/LipReader/dictations/`. Your edits are the labels for future personal fine-tuning.
+`~/Library/Application Support/SilentFlow/dictations/`. Your edits are the labels for future personal fine-tuning.
 
 - The first launch asks for **Accessibility** access (System Settings → Privacy & Security → Accessibility). It's
   needed to see the key while other apps are focused and to type into them. The build is ad-hoc signed, so after
-  a rebuild macOS treats it as a new app: remove Lip Reader from that list and allow it again.
+  a rebuild macOS treats it as a new app: remove SilentFlow from that list and allow it again.
 - The menu bar icon (a mouth) lets you change the key (right ⌥/⌘/⌃/⇧), turn typing or context correction off,
   reopen the window, or calibrate. Closing the window keeps the keyboard running; Quit is in that menu.
 - The camera stays on while the app runs so there's no start-up delay when you press the key.
@@ -44,7 +44,7 @@ correction may adjust a word or two.
 2. fine-tunes the model's visual frontend on 9 of the phrases (~30 s). It keeps the result only if it makes
    fewer mistakes on the other 3, and shows you the before/after count.
 
-Recordings are kept in `~/Library/Application Support/LipReader/calibration/`, and each calibration trains on
+Recordings are kept in `~/Library/Application Support/SilentFlow/calibration/`, and each calibration trains on
 every session so far, so calibrating again keeps improving it. Delete that folder to reset.
 
 | Key | |
@@ -98,19 +98,19 @@ gets its speed from:
 
 ### Layout
 
-- `Sources/LipReader/`: the app (`Camera`, `FaceTracker`, `MouthCropper`, `Segmenter`, `InferenceClient`, `AppModel`, UI).
+- `Sources/SilentFlow/`: the app (`Camera`, `FaceTracker`, `MouthCropper`, `Segmenter`, `InferenceClient`, `AppModel`, UI).
 - `inference/`: the sidecar. `espnet/` is a trimmed copy from [chaplin](https://github.com/amanvirparhar/chaplin) / [auto_avsr](https://github.com/mpc001/auto_avsr), patched for Python 3.12 and MPS.
 - `models/`: weights, downloaded by `setup.sh` (git-ignored).
 
 ### Checking the pipeline on a video
 
-`build/LipReader.app/Contents/MacOS/LipReader --probe <video> <out-dir>` runs the same face tracking,
+`build/SilentFlow.app/Contents/MacOS/SilentFlow --probe <video> <out-dir>` runs the same face tracking,
 cropping and segmentation code on a video file. It writes the mouth crops and one `segment_N.raw` per utterance,
 which you can feed to `inference/vsr_engine.py`'s `VSREngine.transcribe`.
 
 ## Credits and licenses
 
-Lip Reader is MIT licensed (see [LICENSE](LICENSE)). The app icon is the Silent Flow mark (`Resources/logo.svg`);
+SilentFlow is MIT licensed (see [LICENSE](LICENSE)). The app icon is the SilentFlow mark (`Resources/logo.svg`);
 `swift scripts/make_icon.swift` regenerates `Resources/AppIcon.icns` from it.
 
 - Model: Auto-AVSR (Ma et al., ICASSP 2023), `LRS3_V_WER19.1` and `lm_en_subword`, from

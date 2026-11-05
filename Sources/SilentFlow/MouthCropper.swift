@@ -21,8 +21,8 @@ final class MouthCropper {
 
     /// Calibration knobs: zoom > 1 crops tighter around the mouth; shiftY moves
     /// the crop down (in reference-face pixels). 1 / 0 reproduce Auto-AVSR.
-    var zoom = Double(ProcessInfo.processInfo.environment["LIPREAD_CROP_ZOOM"] ?? "") ?? 1.0
-    var shiftY = Double(ProcessInfo.processInfo.environment["LIPREAD_CROP_SHIFT_Y"] ?? "") ?? 0.0
+    var zoom = Double(ProcessInfo.processInfo.environment["SILENTFLOW_CROP_ZOOM"] ?? "") ?? 1.0
+    var shiftY = Double(ProcessInfo.processInfo.environment["SILENTFLOW_CROP_SHIFT_Y"] ?? "") ?? 0.0
     private var history: [[Point2]] = []
 
     func reset() { history.removeAll() }

@@ -29,7 +29,7 @@ final class InferenceClient {
     var partialBeam = 4
     var finalBeam = 10
 
-    private let queue = DispatchQueue(label: "lipreader.inference")
+    private let queue = DispatchQueue(label: "silentflow.inference")
     private var process: Process?
     private var stdin: FileHandle?
     private var ready = false
@@ -40,10 +40,10 @@ final class InferenceClient {
     static func locateRoot() -> URL? {
         let fm = FileManager.default
         func ok(_ u: URL) -> Bool { fm.fileExists(atPath: u.appendingPathComponent("inference/server.py").path) }
-        if let env = ProcessInfo.processInfo.environment["LIPREAD_ROOT"], ok(URL(fileURLWithPath: env)) {
+        if let env = ProcessInfo.processInfo.environment["SILENTFLOW_ROOT"], ok(URL(fileURLWithPath: env)) {
             return URL(fileURLWithPath: env)
         }
-        if let s = Bundle.main.object(forInfoDictionaryKey: "LipReadRoot") as? String, ok(URL(fileURLWithPath: s)) {
+        if let s = Bundle.main.object(forInfoDictionaryKey: "SilentFlowRoot") as? String, ok(URL(fileURLWithPath: s)) {
             return URL(fileURLWithPath: s)
         }
         var u = Bundle.main.bundleURL
@@ -105,7 +105,7 @@ final class InferenceClient {
 
     private func launch() {
         guard let root = Self.locateRoot() else {
-            onEvent?(.failed("Can't find the inference/ folder. Set LIPREAD_ROOT to the repo path."))
+            onEvent?(.failed("Can't find the inference/ folder. Set SILENTFLOW_ROOT to the repo path."))
             return
         }
         let python = root.appendingPathComponent("inference/.venv/bin/python")

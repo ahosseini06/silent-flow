@@ -2,12 +2,12 @@
 import PackageDescription
 
 let package = Package(
-    name: "LipReader",
+    name: "SilentFlow",
     platforms: [.macOS(.v15)],
     targets: [
         .executableTarget(
-            name: "LipReader",
-            path: "Sources/LipReader",
+            name: "SilentFlow",
+            path: "Sources/SilentFlow",
             swiftSettings: [.swiftLanguageMode(.v5)]
         )
     ]
