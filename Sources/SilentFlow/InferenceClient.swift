@@ -11,7 +11,20 @@ final class InferenceClient {
         case result(segment: Int, text: String, final: Bool, corrected: Bool, done: Bool, millis: Double)
         case progress(Double)
         case calibrated([String: Any])
+        /// First launch of a packaged build: model weights are being downloaded (bytes done, bytes total).
+        case downloading(done: Int64, total: Int64)
+        /// Weights are in place and the engine is starting.
+        case loading
         case failed(String)
+    }
+
+    /// Where the sidecar's Python, code and weights live.
+    struct Runtime {
+        let python: URL
+        let inference: URL      // folder holding server.py
+        let models: URL         // vsr/, lm/ (and llm/ when packaged)
+        let llm: String?        // local LLM folder when packaged; nil = server.py's default HF repo
+        let packaged: Bool
     }
 
     struct Take {
@@ -37,6 +50,35 @@ final class InferenceClient {
     private var jobs: [Job] = []
     private var lineBuffer = Data()
 
+    /// A packaged build (scripts/package.sh) carries Python and the sidecar in Contents/Resources and keeps
+    /// the weights in Application Support. A developer build runs from the repo checkout as before.
+    enum Located { case found(Runtime), missing(String) }
+
+    static func runtime() -> Located {
+        let fm = FileManager.default
+        if let res = Bundle.main.resourceURL {
+            let inference = res.appendingPathComponent("inference")
+            let python = res.appendingPathComponent("runtime/python/bin/python3")
+            if fm.fileExists(atPath: inference.appendingPathComponent("server.py").path),
+               fm.isExecutableFile(atPath: python.path) {
+                let support = fm.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+                let models = support.appendingPathComponent("SilentFlow/models")
+                return .found(Runtime(python: python, inference: inference, models: models,
+                                        llm: models.appendingPathComponent("llm/Qwen3.5-4B-MLX-4bit").path,
+                                        packaged: true))
+            }
+        }
+        guard let root = locateRoot() else {
+            return .missing("Can't find the inference/ folder. Set SILENTFLOW_ROOT to the repo path.")
+        }
+        let python = root.appendingPathComponent("inference/.venv/bin/python")
+        guard fm.isExecutableFile(atPath: python.path) else {
+            return .missing("Python env missing. Run ./scripts/setup.sh in \(root.path)")
+        }
+        return .found(Runtime(python: python, inference: root.appendingPathComponent("inference"),
+                                models: root.appendingPathComponent("models"), llm: nil, packaged: false))
+    }
+
     static func locateRoot() -> URL? {
         let fm = FileManager.default
         func ok(_ u: URL) -> Bool { fm.fileExists(atPath: u.appendingPathComponent("inference/server.py").path) }
@@ -55,7 +97,7 @@ final class InferenceClient {
     }
 
     func start() {
-        queue.async { self.launch() }
+        queue.async { self.prepare() }
     }
 
     func stop() {
@@ -103,25 +145,101 @@ final class InferenceClient {
         }
     }
 
-    private func launch() {
-        guard let root = Self.locateRoot() else {
-            onEvent?(.failed("Can't find the inference/ folder. Set SILENTFLOW_ROOT to the repo path."))
-            return
+    /// Packaged builds download the weights on first launch, then start the engine.
+    private func prepare() {
+        let rt: Runtime
+        switch Self.runtime() {
+        case let .missing(msg): onEvent?(.failed(msg)); return
+        case let .found(r): rt = r
         }
-        let python = root.appendingPathComponent("inference/.venv/bin/python")
-        guard FileManager.default.isExecutableFile(atPath: python.path) else {
-            onEvent?(.failed("Python env missing. Run ./scripts/setup.sh in \(root.path)"))
-            return
-        }
+        guard rt.packaged else { launch(rt); return }
+        Self.clearQuarantine(rt)
+        let marker = rt.models.appendingPathComponent(".complete")
+        if FileManager.default.fileExists(atPath: marker.path) { launch(rt); return }
+        download(rt)
+    }
+
+    /// A copy dragged from the disk image is quarantined file by file. Approving the app in System Settings
+    /// covers the app itself, not the Python it starts, so clear the flag on our own runtime and sidecar.
+    private static func clearQuarantine(_ rt: Runtime) {
+        let res = rt.inference.deletingLastPathComponent()
+        let x = Process()
+        x.executableURL = URL(fileURLWithPath: "/usr/bin/xattr")
+        x.arguments = ["-dr", "com.apple.quarantine",
+                       res.appendingPathComponent("runtime").path, res.appendingPathComponent("inference").path]
+        x.standardOutput = FileHandle.nullDevice
+        x.standardError = FileHandle.nullDevice
+        try? x.run()
+        x.waitUntilExit()
+    }
+
+    /// Runs inference/fetch_models.py and turns its JSON lines into download events.
+    private func download(_ rt: Runtime) {
+        try? FileManager.default.createDirectory(at: rt.models, withIntermediateDirectories: true)
         let p = Process()
-        p.executableURL = python
-        p.arguments = [root.appendingPathComponent("inference/server.py").path,
-                       "--models", root.appendingPathComponent("models").path]
-        p.currentDirectoryURL = root.appendingPathComponent("inference")
+        p.executableURL = rt.python
+        p.arguments = [rt.inference.appendingPathComponent("fetch_models.py").path, "--dest", rt.models.path]
+        p.currentDirectoryURL = rt.inference
+        var env = ProcessInfo.processInfo.environment
+        env["PYTHONUNBUFFERED"] = "1"
+        env["PYTHONDONTWRITEBYTECODE"] = "1"
+        p.environment = env
+        let out = Pipe()
+        p.standardOutput = out
+        p.standardError = FileHandle.standardError
+        var buffer = Data()
+        var lastError: String?
+        out.fileHandleForReading.readabilityHandler = { [weak self] h in
+            let d = h.availableData
+            guard !d.isEmpty else { h.readabilityHandler = nil; return }
+            buffer.append(d)
+            while let nl = buffer.firstIndex(of: 0x0A) {
+                let line = buffer[buffer.startIndex..<nl]
+                buffer.removeSubrange(buffer.startIndex...nl)
+                guard let obj = try? JSONSerialization.jsonObject(with: line) as? [String: Any] else { continue }
+                switch obj["type"] as? String {
+                case "plan", "download":
+                    let done = (obj["done"] as? NSNumber)?.int64Value ?? 0
+                    let total = (obj["total"] as? NSNumber)?.int64Value ?? 1
+                    self?.onEvent?(.downloading(done: done, total: total))
+                case "error":
+                    lastError = obj["message"] as? String
+                default:
+                    break
+                }
+            }
+        }
+        p.terminationHandler = { [weak self] proc in
+            self?.queue.async {
+                guard let self else { return }
+                if proc.terminationStatus == 0 {
+                    self.launch(rt)
+                } else {
+                    let why = lastError.map { " (\($0))" } ?? ""
+                    self.onEvent?(.failed("Couldn't download the lip-reading models\(why). Check your connection, then quit and reopen SilentFlow to resume."))
+                }
+            }
+        }
+        do {
+            try p.run()
+        } catch {
+            onEvent?(.failed("Couldn't start the model download: \(error.localizedDescription)"))
+        }
+    }
+
+    private func launch(_ rt: Runtime) {
+        onEvent?(.loading)
+        let p = Process()
+        p.executableURL = rt.python
+        var args = [rt.inference.appendingPathComponent("server.py").path, "--models", rt.models.path]
+        if let llm = rt.llm { args += ["--llm-repo", llm] }
+        p.arguments = args
+        p.currentDirectoryURL = rt.inference
         var env = ProcessInfo.processInfo.environment
         env["PYTHONUNBUFFERED"] = "1"
         env["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
-        env["HF_HUB_OFFLINE"] = "1"  // everything is downloaded by setup.sh; never phone home
+        env["HF_HUB_OFFLINE"] = "1"  // weights are already on disk; never phone home
+        if rt.packaged { env["PYTHONDONTWRITEBYTECODE"] = "1" }  // keep the signed bundle unchanged
         p.environment = env
 
         let inPipe = Pipe(), outPipe = Pipe(), errPipe = Pipe()

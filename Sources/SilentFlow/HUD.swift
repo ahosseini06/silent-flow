@@ -194,6 +194,7 @@ struct MenuBarContent: View {
     private var statusLine: String {
         switch model.phase {
         case .starting, .loadingModel: return "Loading…"
+        case let .downloading(done, total): return "Downloading models… \(AppModel.downloadText(done, total))"
         case .error(let msg): return msg
         case .ready:
             if !model.accessibilityTrusted { return "Needs Accessibility access to type" }

@@ -134,6 +134,8 @@ struct StatusPill: View {
         switch model.phase {
         case .starting: return ("Starting camera…", .gray, false)
         case .loadingModel: return ("Loading lip-reading model…", .gray, true)
+        case let .downloading(done, total):
+            return ("Downloading the lip-reading models (first launch only)… \(AppModel.downloadText(done, total))", .gray, true)
         case .error(let msg): return (msg, .red, false)
         case .ready:
             if model.manualHeld { return ("Reading while you hold the key", .red, true) }
