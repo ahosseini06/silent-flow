@@ -3,13 +3,27 @@
 A native macOS app that shows your webcam and writes subtitles for what your lips say.
 No audio is used, and everything runs on your Mac.
 
+## Download
+
+**[SilentFlow.dmg](https://github.com/ahosseini06/silent-flow/releases/latest/download/SilentFlow.dmg)**, rebuilt from
+every push to `main` by [`.github/workflows/dmg.yml`](.github/workflows/dmg.yml). Needs Apple Silicon and macOS 15+.
+
+The image carries the app with its own Python runtime. On first launch it downloads the models (about 4.3 GB, from
+Hugging Face) into `~/Library/Application Support/SilentFlow/models`, showing progress in the window and the menu bar;
+an interrupted download resumes on the next launch. The build is ad-hoc signed, so macOS asks you to approve it once
+(System Settings → Privacy & Security → Open Anyway).
+
+## Building from source
+
 ```
-./scripts/setup.sh       # once: Python env + model weights (~1.2 GB) + correction LLM (~2.5 GB)
-./scripts/build_app.sh   # builds build/SilentFlow.app (Swift toolchain only, no Xcode)
+./scripts/setup.sh       # once: Python env + model weights (~1.2 GB) + correction LLM (~3.1 GB)
+./scripts/build_app.sh   # builds build/SilentFlow.app that runs from this checkout (Swift toolchain only, no Xcode)
 open build/SilentFlow.app
+
+./scripts/package.sh     # the distributable build/SilentFlow-<version>.dmg (bundles Python; weights fetched on first launch)
 ```
 
-Needs Apple Silicon, macOS 14+, [`uv`](https://github.com/astral-sh/uv), and the Swift toolchain (Command Line Tools is enough).
+Needs Apple Silicon, macOS 15+, [`uv`](https://github.com/astral-sh/uv), and the Swift toolchain (Command Line Tools is enough).
 
 ## Using it
 

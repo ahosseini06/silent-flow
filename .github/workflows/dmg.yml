@@ -1,0 +1,59 @@
+# Builds SilentFlow.dmg from every push to main and publishes it as the repo's latest release, so
+#   https://github.com/ahosseini06/silent-flow/releases/latest/download/SilentFlow.dmg
+# always serves the newest build. The website's Download button links there.
+#
+# Pull requests build the same image as a check (kept as a workflow artifact) without publishing.
+# Ad-hoc signed for now (see scripts/package.sh). Model weights aren't in the image: the app
+# downloads them on first launch (inference/fetch_models.py).
+name: Build DMG
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# One build at a time; a newer push waits for the running one rather than cancelling it mid-publish.
+concurrency:
+  group: build-dmg-${{ github.event_name == 'pull_request' && github.ref || 'main' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  dmg:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.12.19"
+
+      - name: Build and package
+        run: scripts/package.sh
+
+      - name: Keep the image with this run
+        uses: actions/upload-artifact@v4
+        with:
+          name: SilentFlow-dmg
+          path: build/SilentFlow-*.dmg
+          retention-days: 7
+
+      - name: Publish as the latest release
+        if: github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp build/SilentFlow-*.dmg build/SilentFlow.dmg
+          gh release delete latest-build --cleanup-tag --yes || true
+          gh release create latest-build build/SilentFlow.dmg \
+            --target "$GITHUB_SHA" \
+            --latest \
+            --title "Latest build (${GITHUB_SHA::7})" \
+            --notes "Built automatically from $GITHUB_SHA on main.
+
+          Needs a Mac with Apple Silicon running macOS 15 or later, and a webcam. On first launch SilentFlow downloads its lip-reading models (about 4.3 GB) into ~/Library/Application Support/SilentFlow; after that it works offline.
+
+          This build isn't notarised yet: the first time you open it, go to System Settings → Privacy & Security and click Open Anyway (details in the disk image's Read me first)."

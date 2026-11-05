@@ -145,9 +145,17 @@ final class AppModel: ObservableObject {
 
     enum Phase: Equatable {
         case starting
+        /// First launch of a packaged build: fetching the model weights.
+        case downloading(done: Int64, total: Int64)
         case loadingModel
         case ready
         case error(String)
+    }
+
+    /// "42% of 4.3 GB"
+    static func downloadText(_ done: Int64, _ total: Int64) -> String {
+        let pct = total > 0 ? Int((Double(done) / Double(total) * 100).rounded(.down)) : 0
+        return "\(min(pct, 100))% of \(String(format: "%.1f", Double(total) / 1e9)) GB"
     }
 
     @Published var phase: Phase = .starting
@@ -414,6 +422,12 @@ final class AppModel: ObservableObject {
                 }
             case .llmReady:
                 self.contextReady = true
+            case let .downloading(done, total):
+                if case .error = self.phase { return }
+                self.phase = .downloading(done: done, total: total)
+            case .loading:
+                if case .error = self.phase { return }
+                self.phase = .loadingModel
             case let .failed(msg):
                 self.phase = .error(msg)
                 if case .training = self.calibration?.stage {
